@@ -51,16 +51,17 @@ void *myalloc(int size){
 	if (init_flag == 1) {
 		init_flag = 0;
 
-		addressable = mmap(NULL, (PAGE_SIZE * INIT_SIZE), PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+		addressable = mmap(NULL, (PAGE_SIZE * INIT_SIZE),
+												PROT_READ | PROT_WRITE,
+												MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 		curr_header = addressable;
 
 		curr_header->active = FIELD_INACTIVE; // Set active bit to 0 - inactive
 		curr_header->size = (PAGE_SIZE * INIT_SIZE); // Set size to CHUNK_SIZE
-		offset_limit = (PAGE_SIZE * INIT_SIZE)/HEADER_SIZE;
+		offset_limit = (PAGE_SIZE * INIT_SIZE)/HEADER_SIZE - 1;
 
 		// Create footer at end of mapped memory
-		curr_footer = curr_header + curr_header->size;
-		curr_footer->next = -1;
+		curr_footer = curr_header + curr_header->size - 1; curr_footer->next = -1;
 		curr_footer->active = FIELD_ACTIVE;
 		curr_footer->last = FIELD_LAST;
 	}
@@ -142,5 +143,5 @@ void myfree(void *ptr)	{
 		struct footer* prev_footer = (struct footer*) (block - HEADER_SIZE);
 	}
 
-	
+
 }
