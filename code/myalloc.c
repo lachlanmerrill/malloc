@@ -15,7 +15,7 @@
 #define WORD_SIZE 4
 #define HEADER_SIZE 1
 #define PAGE_SIZE 4096
-#define INIT_SIZE 8
+#define INIT_SIZE 256
 
 struct header { // header is exactly 32 bits (4 bytes, 1 word)
 	int size : 30; // Size field takes 31 bits
