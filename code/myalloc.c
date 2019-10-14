@@ -75,7 +75,7 @@ void *myalloc(int size) {
 		prefooter = (struct prefooter*) curr_footer - HEADER_SIZE;
 		prefooter->next = HEADER_SIZE;
 
-		printf("Initialized with %d words.\n", curr_header->size);
+		// printf("Initialized with %d words.\n", curr_header->size);
 
 	}
 
@@ -317,23 +317,23 @@ void myfree(void *ptr)	{
 		// No coalescing required
 
 		struct prefooter* prev_prefooter = find_prev_prefooter(curr_header);
-		printf("Found previous prefooter at %ld\n", (long int) prev_prefooter - (long int) addressable);
+		// printf("Found previous prefooter at %ld\n", (long int) prev_prefooter - (long int) addressable);
 		struct prefooter* curr_prefooter = (struct prefooter*) curr_footer - HEADER_SIZE;
 
 		curr_prefooter->next = prev_prefooter->next;
 		prev_prefooter->next = curr_header - (struct header*) addressable;
-		printf("No coalescing\n");
+		// printf("No coalescing\n");
 
 	} else if (coal_for && coal_back) {
 
-		printf("For and back\n");
+		// printf("For and back\n");
 		// Forwards and backwards required
 		prev_header->size = prev_header->size + curr_header->size + next_header->size;
 		next_footer->size = prev_header->size;
 
 	} else if (coal_for) {
 
-		printf("For only\n");
+		// printf("For only\n");
 		// Forwards only required
 
 		struct prefooter* prev_prefooter = find_prev_prefooter(curr_header);
@@ -345,7 +345,7 @@ void myfree(void *ptr)	{
 	} else if (coal_back) {
 		// Backwards only required
 
-		printf("Back only\n");
+		// printf("Back only\n");
 
 		prev_header->size += curr_header->size;prev_header->size;
 

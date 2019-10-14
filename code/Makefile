@@ -12,6 +12,9 @@ all: $(TESTS)
 test : test.o $(LIB)
 	$(CC) test.o $(CFLAGS) -o test -L. -l$(LIB) -lpthread
 
+test1 : test1.o $(LIB)
+	$(CC) test1.o $(CFLAGS) -o test -L. -l$(LIB) -lpthread
+
 $(LIB) : $(LIBOBJS)
 	ar -cvr $(LIBFILE) $(LIBOBJS)
 	#ranlib $(LIBFILE) # may be needed on some systems
