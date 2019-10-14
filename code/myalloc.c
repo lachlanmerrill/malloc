@@ -77,7 +77,7 @@ void *myalloc(int size) {
 
 	}
 
-	printf("%ld\n", (long int)addressable);
+	// printf("%ld\n", (long int)addressable);
 
 	struct prefooter* first_free = (struct prefooter*) addressable;
 
@@ -116,13 +116,13 @@ void *myalloc(int size) {
 
 	prefooter = (struct prefooter*) curr_footer - HEADER_SIZE;
 
-	printf("First free block at %d\n", first_free->next);
-
-
-	printf("Assigned header at %ld\n", (long int) (curr_header - (struct header*) addressable));
-	printf("Assigned footer %ld\n", (long int) (curr_footer - (struct header*) addressable));
-	printf("Assigned prefooter %ld\n", (long int) (prefooter - (struct prefooter*) addressable));
-	printf("Header size is %d\n", curr_header->size);
+	// printf("First free block at %d\n", first_free->next);
+	//
+	//
+	// printf("Assigned header at %ld\n", (long int) (curr_header - (struct header*) addressable));
+	// printf("Assigned footer %ld\n", (long int) (curr_footer - (struct header*) addressable));
+	// printf("Assigned prefooter %ld\n", (long int) (prefooter - (struct prefooter*) addressable));
+	// printf("Header size is %d\n", curr_header->size);
 
 	int fail_flag = 1;
 
@@ -350,7 +350,7 @@ void myfree(void *ptr)	{
 
 	struct prefooter* first_free = (struct prefooter*) addressable;
 
-	printf("First free block now at %d\n", first_free->next);
+	// ("First free block now at %d\n", first_free->next);
 
 
 
