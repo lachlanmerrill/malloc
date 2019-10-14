@@ -15,7 +15,7 @@
 #define WORD_SIZE 4
 #define HEADER_SIZE 1
 #define PAGE_SIZE 4096
-#define INIT_SIZE 256
+#define INIT_SIZE 512
 
 struct header { // header is exactly 32 bits (4 bytes, 1 word)
 	int size : 30; // Size field takes 31 bits
@@ -75,6 +75,8 @@ void *myalloc(int size) {
 		prefooter = (struct prefooter*) curr_footer - HEADER_SIZE;
 		prefooter->next = HEADER_SIZE;
 
+		printf("Initialized with %d words.\n", curr_header->size);
+
 	}
 
 	// printf("%ld\n", (long int)addressable);
@@ -117,12 +119,8 @@ void *myalloc(int size) {
 	prefooter = (struct prefooter*) curr_footer - HEADER_SIZE;
 
 	// printf("First free block at %d\n", first_free->next);
-	//
-	//
-	// printf("Assigned header at %ld\n", (long int) (curr_header - (struct header*) addressable));
-	// printf("Assigned footer %ld\n", (long int) (curr_footer - (struct header*) addressable));
-	// printf("Assigned prefooter %ld\n", (long int) (prefooter - (struct prefooter*) addressable));
-	// printf("Header size is %d\n", curr_header->size);
+	// printf("Starting search from %ld\n", (long int) (curr_header - (struct header*) addressable));
+
 
 	int fail_flag = 1;
 
@@ -134,7 +132,6 @@ void *myalloc(int size) {
 
 		fail_flag = 0;
 	}
-
 
 	// // Jump to new footer (or space for the new footer) and initialize it
 	// curr_footer = curr_header + needed_size - HEADER_SIZE;
@@ -178,6 +175,8 @@ void *myalloc(int size) {
 			first_free->next = next_header - (struct header*) addressable;
 		}
 
+		// printf("Size excess of %d\n", next_header->size);
+
 	} else {
 		struct prefooter* curr_prefooter = (struct prefooter*) curr_footer - HEADER_SIZE;
 		prefooter->next = curr_prefooter->next;
@@ -190,6 +189,12 @@ void *myalloc(int size) {
 		}
 	}
 
+	// printf("Assigned header at %ld\n", (long int) (curr_header - (struct header*) addressable));
+	// printf("Assigned footer %ld\n", (long int) (curr_footer - (struct header*) addressable));
+	// printf("Assigned prefooter %ld\n", (long int) (prefooter - (struct prefooter*) addressable));
+	// printf("Header size is %d\n", curr_header->size);
+
+
 	struct header* ret_val = curr_header + HEADER_SIZE;
 
 	// Return a pointer to the start of the now allocated memory.
@@ -197,10 +202,16 @@ void *myalloc(int size) {
 }
 
 struct prefooter* find_prev_prefooter(struct header* search_header) {
+
+	// We'll start the search at the first free block
 	struct prefooter* first_free = (struct prefooter*) addressable;
 
 	struct header* curr_header = (struct header*) addressable + first_free->next;
 
+	// printf("Starting search from %ld\n", (long int) curr_header - (long int) addressable);
+	// printf("Search header is at %ld\n", (long int) search_header - (long int) addressable);
+
+	// in the case there is no free block before the new block
 	if (curr_header >= search_header) {
 		return first_free;
 	}
@@ -208,12 +219,14 @@ struct prefooter* find_prev_prefooter(struct header* search_header) {
 	struct prefooter* curr_prefooter = (struct prefooter*) curr_header + curr_header->size - 2;
 	struct prefooter* prev_prefooter = curr_prefooter;
 
+	// Go through the linked list of free blocks until a prefooter next pointer skips over the new block.
 	while (curr_header < search_header && curr_header->last == FIELD_NOTLAST) {
 		curr_header = (struct header*) addressable + curr_prefooter->next;
 		prev_prefooter = curr_prefooter;
-		curr_prefooter = (struct prefooter*) curr_header + curr_header->size;
+		curr_prefooter = (struct prefooter*) curr_header + curr_header->size - 2;
 	}
 
+	// Return that prefooter
 	return prev_prefooter;
 }
 
@@ -303,25 +316,24 @@ void myfree(void *ptr)	{
 	if (!coal_for && !coal_back) {
 		// No coalescing required
 
-		// printf("No coalescing\n");
-
 		struct prefooter* prev_prefooter = find_prev_prefooter(curr_header);
+		printf("Found previous prefooter at %ld\n", (long int) prev_prefooter - (long int) addressable);
 		struct prefooter* curr_prefooter = (struct prefooter*) curr_footer - HEADER_SIZE;
 
 		curr_prefooter->next = prev_prefooter->next;
 		prev_prefooter->next = curr_header - (struct header*) addressable;
-
+		printf("No coalescing\n");
 
 	} else if (coal_for && coal_back) {
 
-		// printf("For and back\n");
+		printf("For and back\n");
 		// Forwards and backwards required
 		prev_header->size = prev_header->size + curr_header->size + next_header->size;
 		next_footer->size = prev_header->size;
 
 	} else if (coal_for) {
 
-		// printf("For only\n");
+		printf("For only\n");
 		// Forwards only required
 
 		struct prefooter* prev_prefooter = find_prev_prefooter(curr_header);
@@ -333,7 +345,7 @@ void myfree(void *ptr)	{
 	} else if (coal_back) {
 		// Backwards only required
 
-		// printf("Back only\n");
+		printf("Back only\n");
 
 		prev_header->size += curr_header->size;prev_header->size;
 
@@ -349,38 +361,4 @@ void myfree(void *ptr)	{
 	}
 
 	struct prefooter* first_free = (struct prefooter*) addressable;
-
-	// ("First free block now at %d\n", first_free->next);
-
-
-
-	// // What the fuck.
-	// if (curr_footer->last != FIELD_LAST) {
-	// 	struct header* next_header = (struct header*) curr_footer + HEADER_SIZE;
-	// 	struct footer* next_footer = (struct footer*) curr_footer + next_header->size - HEADER_SIZE;
-	// 	struct prefooter* next_prefooter;
-	//
-	// 	// Coalesce all the following free blocks.
-	// 	while (next_header->active == FIELD_INACTIVE && next_footer->last != FIELD_LAST) {
-	// 		block->size += next_header->size;
-	// 		curr_footer = next_footer;
-	// 		next_prefooter = (struct prefooter*) curr_footer;
-	// 		next_prefooter->offset = (int) (block - (struct header*) addressable);
-	//
-	// 		next_header = (struct header*) curr_footer + HEADER_SIZE;
-	// 		next_footer = (struct footer*) next_header + next_header->size - HEADER_SIZE;
-	// 	}
-	//
-	// 	// Iterate through until we find the next free field
-	// 	while (next_header->active != FIELD_INACTIVE && next_footer->last != FIELD_LAST) {
-	// 		next_header = (struct header*) next_footer + HEADER_SIZE;
-	// 		next_footer = (struct footer*) next_header + next_header->size - HEADER_SIZE;
-	// 	}
-	//
-	// 	if (next_footer->last != FIELD_LAST) {
-	// 		curr_footer->next = (struct footer*) next_header - curr_footer;
-	// 	}
-	//
-	// }
-
 }
