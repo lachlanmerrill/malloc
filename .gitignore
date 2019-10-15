@@ -1,2 +1,7 @@
 code/test1.c
+code/test2.c
+code/test3.c
+code/test4.c
+code/test5.c
+code/Makefile
 *.o
