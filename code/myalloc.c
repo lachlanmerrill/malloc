@@ -31,29 +31,34 @@ static void *addressable;
 
 void *myalloc(int size) {
 
-  header curr_header; /// Initialize a struct header pointer
+  header curr_header; // Initialize a struct header pointer
   header curr_footer;
   prefooter pre_footer;
 
-  // Perform first-time setup
+  // Perform first-time setup if addressable has not been set yet.
   if (addressable == NULL) {
     int page_size = getpagesize();
 
+    // Map a large number of pages initially.
     addressable = mmap(NULL, (page_size * INIT_SIZE), PROT_READ | PROT_WRITE,
                        MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 
+    // Reserve a pre-footer at beginning of mapped memory to store the first
+    // free block's offset.
     prefooter first_free;
     first_free = addressable;
     curr_header = (header)first_free + HEADER_SIZE;
 
     first_free->next = HEADER_SIZE;
 
+    // Find and initialize the header.
     int ini_size = (page_size * INIT_SIZE) / WORD_SIZE - HEADER_SIZE;
 
     curr_header->active = FIELD_INACTIVE; // Set active bit to 0 - inactive
-    curr_header->size = ini_size;         // Set size to WORD_SIZE
+    curr_header->size = ini_size;         // Set size to init size
     curr_header->last = FIELD_LAST;
 
+    // Find and initialize the footer.
     curr_footer = (header)addressable + curr_header->size - HEADER_SIZE;
 
     curr_footer->size = ini_size;
@@ -69,7 +74,7 @@ void *myalloc(int size) {
   prefooter first_free = (prefooter)addressable;
 
   // Word align by ensuring size is divisible by four
-  size += size % WORD_SIZE;
+  size += WORD_SIZE - (size % WORD_SIZE);
 
   // Increase size to accommodate the header and footer fields.
   int needed_size = size / WORD_SIZE;
@@ -77,8 +82,7 @@ void *myalloc(int size) {
   // Convert size in bytes to size in words
   needed_size = needed_size + HEADER_SIZE * 2;
 
-  // Now we start doing malloc-y stuff
-
+  // Find the first free block.
   curr_header = (header)addressable + first_free->next;
   curr_footer = curr_header + curr_header->size - HEADER_SIZE;
 
@@ -88,7 +92,9 @@ void *myalloc(int size) {
 
   int fail_flag = 1;
 
-  while (curr_header->size < needed_size) {
+  // Go through the free list until a block of sufficient size is found.
+  while (curr_header->size < needed_size &&
+         curr_header->last == FIELD_NOTLAST) {
     curr_header = (header)addressable + pre_footer->next;
     old_footer = curr_footer;
     curr_footer = curr_header + curr_header->size - HEADER_SIZE;
@@ -97,8 +103,10 @@ void *myalloc(int size) {
     fail_flag = 0;
   }
 
-  header next_footer = curr_footer;
   header next_header;
+
+  // Prep for updating the free list.
+  header next_footer = curr_footer;
 
   // If the free block we assigned was larger than needed
   if (curr_header->size > (needed_size + (HEADER_SIZE * 3))) {
@@ -177,6 +185,7 @@ prefooter find_prev_prefooter(header search_header) {
   return prev_prefooter;
 }
 
+// Frees a block of allocated memory and coalesces with adjacent free regions.
 void myfree(void *ptr) {
 
   // Find the header of the block. We assume we've been given a valid pointer
@@ -191,6 +200,7 @@ void myfree(void *ptr) {
   curr_footer->active = FIELD_INACTIVE;
   curr_header->active = FIELD_INACTIVE;
 
+  // Forwards and backwards coalescing flags.
   int coal_for = 0;
   int coal_back = 0;
 
@@ -200,6 +210,7 @@ void myfree(void *ptr) {
   header next_header;
   header next_footer;
 
+  // Check for backwards coalescing possibility.
   if (curr_header != (header)addressable + HEADER_SIZE) {
     prev_footer = curr_header - HEADER_SIZE;
 
@@ -217,6 +228,7 @@ void myfree(void *ptr) {
     coal_back = 0;
   }
 
+  // Check for forwards coalescing prossibility.
   if (curr_header->last == FIELD_NOTLAST) {
     next_header = curr_footer + HEADER_SIZE;
 
@@ -271,5 +283,6 @@ void myfree(void *ptr) {
     curr_prefooter->next = prev_prefooter->next;
   }
 
-  prefooter first_free = (prefooter)addressable;
+  // Set the pointer parameter to NULL.
+  ptr = NULL;
 }
